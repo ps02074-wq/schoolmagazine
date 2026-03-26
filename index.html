@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電子書櫃系統</title>
+    <style>
+        :root {
+            --primary-color: #4285f4;
+            --success-color: #0f9d58;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .primary:hover {
+            background: #3367d6;
+        }
+
+        .btn.small {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        /* Admin Bar */
+        .admin-bar {
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        /* Toolbar & Category */
+        .toolbar {
+            margin-bottom: 20px;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 5px;
+        }
+
+        .category-list {
+            display: inline-flex;
+            gap: 10px;
+        }
+
+        .cat-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .cat-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .cat-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Book Grid */
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 25px;
+        }
+
+        .book-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-delete-book {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-delete-book:hover {
+            background: #ffebee;
+            color: red;
+        }
+
+        .sortable-ghost {
+            opacity: 0.4;
+        }
+
+        .sortable-chosen {
+            background: #e0f7fa;
+        }
+
+        .book-thumb {
+            width: 100%;
+            aspect-ratio: 1 / 1.4;
+            background: #eee;
+            object-fit: cover;
+            position: relative;
+        }
+
+        .book-info {
+            padding: 12px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .book-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            line-height: 1.4;
+            color: #333;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .book-tag {
+            display: inline-block;
+            font-size: 11px;
+            background: #eef;
+            color: var(--primary-color);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            align-self: flex-start;
+        }
+
+        .book-meta {
+            margin-top: auto;
+            font-size: 12px;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .meta-heart {
+            cursor: pointer;
+            transition: transform 0.2s, color 0.2s;
+        }
+
+        .meta-heart:hover {
+            transform: scale(1.2);
+        }
+
+        .meta-heart.liked {
+            color: #e74c3c;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        .status-log {
+            max-height: 150px;
+            overflow-y: auto;
+            background: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+
+        .log-item {
+            margin-bottom: 2px;
+        }
+
+        .log-success {
+            color: green;
+        }
+
+        .log-error {
+            color: red;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            color: #888;
+        }
+
+        /* File Rename List */
+        .file-list {
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 5px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+
+        .file-item span {
+            width: 30%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-item input {
+            width: 65%;
+            padding: 4px;
+        }
+
+        #upload-category {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        /* Reader Overlay */
+        .reader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #333;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .reader-overlay.dark-mode {
+            background: #000;
+        }
+
+        .reader-overlay.dark-mode .pdf-canvas {
+            filter: invert(0.9) hue-rotate(180deg);
+        }
+
+        .reader-overlay.dark-mode .reader-toolbar {
+            background: #111;
+            border-top: 1px solid #333;
+        }
+
+        .reader-toolbar {
+            height: 50px;
+            background: #222;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .reader-toolbar .center {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .reader-toolbar .right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .reader-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .pdf-canvas {
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            margin: 10px;
+            background: white;
+            /* 解析度變更：確保透過 css 鎖定縮放後的視覺尺寸 */
+            max-width: 100%;
+            height: auto;
+        }
+
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #aaa;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .footer a {
+            color: #aaa;
+            text-decoration: none;
+        }
+        
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.7);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Global Loading -->
+    <div id="loading-overlay" class="hidden">載入中...</div>
+
+    <div class="container">
+        <header class="header">
+            <h1>GAS 電子書櫃</h1>
+            <div id="debug-status" style="font-size:12px; color:gray; display:none;">JS Initializing...</div>
+        </header>
+
+        <div class="toolbar">
+            <div id="category-filter" class="category-list">
+                <button class="cat-btn active" data-id="all">全部</button>
+                <!-- 動態插入分類 -->
+            </div>
+        </div>
+
+        <main>
+            <!-- Admin Bar (Hidden by default) -->
+            <div id="admin-bar" class="admin-bar hidden">
+                <span>🔧 管理模式</span>
+                <button id="btn-toggle-sort" class="btn small">開啟排序</button>
+                <button id="btn-add-cat" class="btn small">新增分類</button>
+                <button id="btn-logout" class="btn small">登出</button>
+            </div>
+
+            <div id="book-grid" class="book-grid">
+                <!-- 書籍列表將渲染於此 -->
+                <div class="empty-state">目前沒有書籍</div>
+            </div>
+        </main>
+
+        <!-- 上傳視窗 -->
+        <div id="upload-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <h2>上傳 PDF 電子書</h2>
+
+                <div class="form-group">
+                    <label>通關密碼</label>
+                    <input type="password" id="upload-password" placeholder="請輸入上傳密碼">
+                </div>
+
+                <div class="form-group">
+                    <label>選擇分類</label>
+                    <select id="upload-category">
+                        <option value="">(無分類)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>選擇檔案 (可多選)</label>
+                    <input type="file" id="upload-files" accept="application/pdf" multiple>
+                    <!-- File Rename List -->
+                    <div id="upload-file-list" class="file-list"></div>
+                </div>
+
+                <div id="upload-status" class="status-log"></div>
+
+                <div class="modal-footer">
+                    <button id="btn-start-upload" class="btn success">開始上傳</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF Reader Overlay -->
+        <div id="pdf-reader" class="reader-overlay hidden">
+            <div class="reader-content" id="reader-container">
+                <!-- Canvas will be injected here -->
+            </div>
+            <div class="reader-toolbar">
+                <div class="left"></div>
+                <div class="center">
+                    <button id="btn-prev" class="btn small">◀</button>
+                    <span id="page-num">1</span> / <span id="page-count">--</span>
+                    <button id="btn-next" class="btn small">▶</button>
+                </div>
+                <div class="right">
+                    <button id="btn-toggle-theme" class="btn small" title="夜間模式">🌙</button>
+                    <button id="btn-zoom-out" class="btn small">－</button>
+                    <span id="zoom-level">100%</span>
+                    <button id="btn-zoom-in" class="btn small">＋</button>
+                    <button id="btn-close-reader" class="btn small" style="background:#e74c3c">關閉</button>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>
+                <a href="#" id="btn-upload-modal">上傳書籍</a> |
+                © 3cfish 電子書櫃 |
+                <a href="#" id="link-admin-login">管理員登入</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- SortableJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
+    <script>
+        // ==========================================================
+        // 重要設定：請將下方網址替換為您的 GAS Web App 發佈網址
+        // ==========================================================
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzNlaWbC1PrugYac_D_AwlBJCk1-hF3I7KMPrjFdvambngsYhHLR3mLu85BzyNmMX0/exec'; 
+
+        // Global Variables
+        let allBooks = [];
+        let activeCategory = 'all';
+        let isAdmin = false;
+        let isSorting = false;
+        let bookSortable = null;
+        let catSortable = null;
+        let allCategories = [];
+
+        // Reader State
+        let pdfDoc = null;
+        let pageNum = 1;
+        let scale = 1.0;
+        let isReaderOpen = false;
+
+        // --- Core Fetch API (取代 google.script.run) ---
+        function runGoogleScript(funcName, args) {
+            showLoading();
+            return new Promise((resolve, reject) => {
+                if (GAS_WEB_APP_URL.includes('AKfyc...')) {
+                    hideLoading();
+                    alert('系統提示：請先在 index.html 替換您的 GAS_WEB_APP_URL 網址！');
+                    return reject('Missing API URL');
+                }
+
+                const payload = {
+                    method: funcName,
+                    parameters: args || []
+                };
+
+                fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => response.json())
+                .then(res => {
+                    hideLoading();
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        console.error('Server Error:', res.error);
+                        reject(res.error);
+                    }
+                })
+                .catch(err => {
+                    hideLoading();
+                    console.error('Fetch error:', err);
+                    alert('網路或伺服器連線錯誤，請重試: ' + err);
+                    reject(err);
+                });
+            });
+        }
+
+        // --- Initialization ---
+        function initApp() {
+            const debugEl = document.getElementById('debug-status');
+            if (debugEl) debugEl.style.display = 'none';
+
+            // Bind UI Elements
+            const btnOpenUpload = document.getElementById('btn-upload-modal');
+            const btnCloseUpload = document.querySelector('.close-btn');
+            const btnStartUpload = document.getElementById('btn-start-upload');
+            const btnLogout = document.getElementById('btn-logout');
+            const btnToggleSort = document.getElementById('btn-toggle-sort');
+            const btnAddCat = document.getElementById('btn-add-cat');
+            const linkAdminLogin = document.getElementById('link-admin-login');
+            const modal = document.getElementById('upload-modal');
+            const statusLog = document.getElementById('upload-status');
+            const uploadFileInput = document.getElementById('upload-files');
+
+            // Reader Elements
+            const btnCloseReader = document.getElementById('btn-close-reader');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+            const btnZoomIn = document.getElementById('btn-zoom-in');
+            const btnZoomOut = document.getElementById('btn-zoom-out');
+            const btnTheme = document.getElementById('btn-toggle-theme');
+
+            btnOpenUpload.onclick = (e) => {
+                if (e) e.preventDefault();
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    if (statusLog) statusLog.innerHTML = '';
+                    document.getElementById('upload-file-list').innerHTML = '';
+                    if (uploadFileInput) uploadFileInput.value = '';
+                }
+            };
+
+            if (uploadFileInput) uploadFileInput.onchange = handleFileSelect;
+            if (btnCloseUpload) btnCloseUpload.onclick = () => modal.classList.add('hidden');
+            if (btnStartUpload) btnStartUpload.onclick = handleUpload;
+            if (linkAdminLogin) linkAdminLogin.onclick = handleAdminLogin;
+            if (btnLogout) btnLogout.onclick = () => location.reload();
+            if (btnToggleSort) btnToggleSort.onclick = toggleSorting;
+            if (btnAddCat) btnAddCat.onclick = handleAddCategory;
+
+            // Reader Binds
+            if (btnCloseReader) btnCloseReader.onclick = closeReader;
+            if (btnPrev) btnPrev.onclick = onPrevPage;
+            if (btnNext) btnNext.onclick = onNextPage;
+            if (btnZoomIn) btnZoomIn.onclick = () => { scale += 0.1; updateZoomUI(); renderPage(pageNum); };
+            btnZoomOut.onclick = () => { if (scale > 0.2) scale -= 0.1; updateZoomUI(); renderPage(pageNum); };
+
+            btnTheme.onclick = () => {
+                document.getElementById('pdf-reader').classList.toggle('dark-mode');
+            };
+
+            // Keyboard Shortcuts
+            window.addEventListener('keydown', (e) => {
+                if (!isReaderOpen) return;
+                switch (e.key) {
+                    case 'ArrowLeft': onPrevPage(); break;
+                    case 'ArrowRight': onNextPage(); break;
+                    case 'Escape': closeReader(); break;
+                }
+            });
+
+            // Initial Load
+            loadData();
+        }
+
+        window.addEventListener('load', initApp);
+
+        // --- Handlers ---
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            const listContainer = document.getElementById('upload-file-list');
+            listContainer.innerHTML = '';
+
+            Array.from(files).forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+
+                const nameParts = file.name.split('.');
+                let ext = '';
+                let baseName = file.name;
+                if (nameParts.length > 1) {
+                    ext = '.' + nameParts.pop();
+                    baseName = nameParts.join('.');
+                }
+
+                item.innerHTML = `
+                    <span>${file.name}</span>
+                    <input type="text" data-idx="${index}" value="${baseName}" placeholder="輸入書籍名稱"> 
+                    <span>${ext ? '.' + ext : ''}</span>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        async function handleUpload() {
+            const btnStartUpload = document.getElementById('btn-start-upload');
+            const password = document.getElementById('upload-password').value;
+            const fileInput = document.getElementById('upload-files');
+            const files = fileInput.files;
+            const nameInputs = document.querySelectorAll('#upload-file-list input');
+            const categoryId = document.getElementById('upload-category').value;
+
+            if (!password) { log('請輸入通關密碼', 'error'); return; }
+            if (files.length === 0) { log('請選擇至少一個檔案', 'error'); return; }
+
+            btnStartUpload.disabled = true;
+            btnStartUpload.textContent = '上傳中...';
+
+            log(`準備上傳 ${files.length} 個檔案...`);
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                let customName = file.name;
+                if (nameInputs[i]) {
+                    const nameParts = file.name.split('.');
+                    const ext = nameParts.length > 1 ? nameParts.pop() : '';
+                    const val = nameInputs[i].value.trim();
+                    if (val) customName = val + (ext ? '.' + ext : '');
+                }
+
+                log(`[${i + 1}/${files.length}] 正在上傳: ${customName}...`);
+
+                try {
+                    const base64 = await toBase64(file);
+                    const data = base64.split(',')[1];
+
+                    await runGoogleScript('uploadBook', [data, customName, file.type, password, categoryId])
+                        .then(res => {
+                            if (res.success) {
+                                log(`✅ ${customName}: 上傳成功`, 'success');
+                            } else {
+                                log(`❌ ${customName}: 失敗 - ${res.message}`, 'error');
+                            }
+                        })
+                        .catch(err => log(`❌ ${customName}: 系統錯誤 - ${err}`, 'error'));
+                } catch (e) {
+                    log(`❌ ${customName}: 檔案讀取失敗`, 'error');
+                }
+            }
+
+            log('所有作業結束');
+            btnStartUpload.disabled = false;
+            btnStartUpload.textContent = '開始上傳';
+            loadData();
+        }
+
+        async function handleAdminLogin(e) {
+            if (e) e.preventDefault();
+            const pwd = prompt('請輸入管理密碼:');
+            if (pwd) {
+                try {
+                    const result = await runGoogleScript('loginAdmin', [pwd]);
+                    if (result) {
+                        isAdmin = true;
+                        document.getElementById('admin-bar').classList.remove('hidden');
+                        alert('登入成功');
+                        renderCategories(allCategories);
+                        renderBooks(allBooks);
+                    } else {
+                        alert('密碼錯誤');
+                    }
+                } catch(e) {}
+            }
+        }
+
+        function toggleSorting() {
+            const btn = document.getElementById('btn-toggle-sort');
+            isSorting = !isSorting;
+            btn.textContent = isSorting ? '儲存排序' : '開啟排序';
+            btn.classList.toggle('primary', isSorting);
+
+            if (isSorting) enableSorting();
+            else disableSorting();
+        }
+
+        async function handleAddCategory() {
+            const name = prompt('請輸入分類名稱:');
+            if (name) {
+                await runGoogleScript('addCategory', [name]);
+                loadData();
+            }
+        }
+
+        // --- Data & Rendering ---
+        async function loadData() {
+            try {
+                // 修改 1：使用單一 API 請求，節省 GAS 兩次冷啟動時間
+                const initialData = await runGoogleScript('getInitialData', []);
+                const config = initialData.config;
+                allBooks = initialData.books;
+                allCategories = initialData.categories;
+
+                if (config && config['網站名稱']) {
+                    document.title = config['網站名稱'];
+                    document.querySelector('header h1').textContent = config['網站名稱'];
+                }
+
+                renderCategories(allCategories);
+                filterBooks(activeCategory);
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('book-grid').innerHTML = '<div class="empty-state">載入失敗: 請檢查開發者工具的 Console 紀錄</div>';
+            }
+        }
+
+        function renderCategories(categories) {
+            const container = document.getElementById('category-filter');
+            const allBtn = container.querySelector('[data-id="all"]');
+            container.innerHTML = '';
+            container.appendChild(allBtn);
+
+            const uploadSelect = document.getElementById('upload-category');
+            if (uploadSelect) {
+                uploadSelect.innerHTML = '<option value="">(無分類)</option>';
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.id;
+                    opt.textContent = cat.name;
+                    uploadSelect.appendChild(opt);
+                });
+            }
+
+            categories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = 'cat-btn';
+                if(activeCategory === cat.id) btn.classList.add('active');
+                btn.textContent = cat.name;
+                btn.dataset.id = cat.id;
+
+                btn.onclick = () => {
+                    if (!isSorting) filterBooks(cat.id);
+                };
+
+                btn.oncontextmenu = (e) => {
+                    if (isAdmin && !isSorting) {
+                        e.preventDefault();
+                        if (confirm(`管理分類: ${cat.name}\n\n[確定] 修改名稱\n[取消] 刪除分類`)) {
+                            const newName = prompt('修改名稱:', cat.name);
+                            if (newName) runGoogleScript('renameCategory', [cat.id, newName]).then(loadData);
+                        } else {
+                            if (confirm(`確定要刪除分類「${cat.name}」嗎？`)) {
+                                runGoogleScript('deleteCategory', [cat.id]).then(loadData);
+                            }
+                        }
+                    }
+                };
+                container.appendChild(btn);
+            });
+
+            allBtn.onclick = () => filterBooks('all');
+        }
+
+        function filterBooks(catId) {
+            activeCategory = catId;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.dataset.id === String(catId)) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+
+            if (catId === 'all') renderBooks(allBooks);
+            else renderBooks(allBooks.filter(b => String(b.categoryId) === String(catId)));
+        }
+
+        function renderBooks(books) {
+            const grid = document.getElementById('book-grid');
+            grid.innerHTML = '';
+
+            if (books.length === 0) {
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.textContent = '此分類下沒有書籍';
+                grid.appendChild(emptyState);
+                return;
+            }
+
+            books.forEach(book => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                card.dataset.id = book.id;
+
+                card.onclick = () => {
+                    if (!isSorting) openReader(book.fileId, book.name, book.id);
+                };
+
+                const img = document.createElement('img');
+                img.className = 'book-thumb';
+                img.loading = 'lazy';
+                img.src = 'https://drive.google.com/thumbnail?id=' + book.fileId + '&sz=w400';
+                img.onerror = function () { this.src = 'https://via.placeholder.com/200x280?text=No+Cover'; };
+                card.appendChild(img);
+
+                const info = document.createElement('div');
+                info.className = 'book-info';
+
+                const catName = allCategories.find(c => String(c.id) === String(book.categoryId))?.name || '未分類';
+                const catTag = document.createElement('span');
+                catTag.className = 'book-tag';
+                catTag.textContent = catName;
+
+                const title = document.createElement('div');
+                title.className = 'book-title';
+                title.title = book.name;
+                title.textContent = book.name;
+
+                if (isAdmin) {
+                    const btnDelete = document.createElement('button');
+                    btnDelete.className = 'btn-delete-book';
+                    btnDelete.innerHTML = '🗑️';
+                    btnDelete.title = '刪除書籍';
+                    btnDelete.onclick = (e) => {
+                        e.stopPropagation(); 
+                        if (confirm(`確定要刪除「${book.name}」嗎？\n(注意：這將永久刪除 PDF 檔案)`)) {
+                            runGoogleScript('deleteBook', [book.id]).then(() => {
+                                loadData();
+                            });
+                        }
+                    };
+                    card.appendChild(btnDelete);
+                }
+
+                info.appendChild(catTag); 
+                info.appendChild(title);
+
+                const meta = document.createElement('div');
+                meta.className = 'book-meta';
+
+                const metaView = document.createElement('div');
+                metaView.className = 'meta-item';
+                metaView.textContent = '👁️ ' + (book.views || 0);
+
+                const metaLike = document.createElement('div');
+                metaLike.className = 'meta-item meta-heart';
+                metaLike.textContent = '❤️ ' + (book.likes || 0);
+                metaLike.onclick = (e) => {
+                    e.stopPropagation();
+                    runGoogleScript('addLike', [book.id]).then(res => {
+                        if (res && res.success) {
+                            book.likes = res.newValue;
+                            metaLike.textContent = '❤️ ' + res.newValue;
+                            metaLike.classList.add('liked'); 
+                        }
+                    });
+                };
+
+                meta.appendChild(metaView);
+                meta.appendChild(metaLike);
+                info.appendChild(meta);
+
+                card.appendChild(info);
+                grid.appendChild(card);
+            });
+        }
+
+        // --- Sorting ---
+        function enableSorting() {
+            const grid = document.getElementById('book-grid');
+            bookSortable = new Sortable(grid, {
+                animation: 150,
+                ghostClass: 'sortable-chosen'
+            });
+
+            const catList = document.getElementById('category-filter');
+            catSortable = new Sortable(catList, {
+                animation: 150,
+                filter: '.active',
+                onMove: function (evt) { return evt.related.dataset.id !== 'all'; }
+            });
+        }
+
+        async function disableSorting() {
+            if (bookSortable) {
+                const newOrder = bookSortable.toArray();
+                await runGoogleScript('saveBookOrder', [newOrder]);
+                bookSortable.destroy();
+                bookSortable = null;
+            }
+            if (catSortable) {
+                const newOrder = catSortable.toArray().filter(id => id !== 'all');
+                await runGoogleScript('saveCategoryOrder', [newOrder]);
+                catSortable.destroy();
+                catSortable = null;
+            }
+            loadData();
+        }
+
+        // --- Utilities ---
+        function log(msg, type = 'normal') {
+            const statusLog = document.getElementById('upload-status');
+            if (!statusLog) return;
+            const div = document.createElement('div');
+            div.className = `log-item log-${type}`;
+            div.textContent = msg;
+            statusLog.appendChild(div);
+            statusLog.scrollTop = statusLog.scrollHeight;
+        }
+
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function showLoading() {
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+
+        // --- PDF Reader Functions ---
+        async function openReader(fileId, title, bookId) {
+            isReaderOpen = true;
+            document.getElementById('pdf-reader').classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; 
+
+            pdfDoc = null;
+            pageNum = 1;
+            scale = 1.0;
+            document.getElementById('zoom-level').textContent = '100%';
+            document.getElementById('reader-container').innerHTML = '<div style="color:white; font-size: 20px;">載入中...</div>';
+
+            try {
+                const result = await runGoogleScript('getBookContent', [fileId]);
+                const pdfData = atob(result.base64);
+
+                const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+                pdfDoc = await loadingTask.promise;
+
+                document.getElementById('page-count').textContent = pdfDoc.numPages;
+                document.getElementById('reader-container').innerHTML = '';
+
+                const page = await pdfDoc.getPage(1);
+                const viewport = page.getViewport({ scale: 1.0 });
+                const containerH = window.innerHeight - 50; 
+                const containerW = window.innerWidth;
+
+                const scaleH = containerH / viewport.height;
+                const scaleW = containerW / viewport.width;
+
+                scale = Math.min(scaleH, scaleW) * 0.95;
+                updateZoomUI();
+
+                renderPage(pageNum);
+
+                if (bookId) {
+                    runGoogleScript('addView', [bookId]);
+                }
+
+                initTouchGestures();
+
+            } catch (e) {
+                alert('無法開啟書籍或權限不足');
+                closeReader();
+            }
+        }
+
+        function closeReader() {
+            isReaderOpen = false;
+            document.getElementById('pdf-reader').classList.add('hidden');
+            document.body.style.overflow = '';
+            pdfDoc = null;
+        }
+
+        async function renderPage(num) {
+            if (!isReaderOpen || !pdfDoc) return;
+
+            const container = document.getElementById('reader-container');
+            container.innerHTML = ''; 
+
+            const isTwoPage = (scale <= 1.0 && window.innerWidth > 800 && num < pdfDoc.numPages);
+
+            await renderSinglePage(num, container);
+
+            if (isTwoPage) {
+                await renderSinglePage(num + 1, container);
+            }
+
+            pageNum = num;
+            document.getElementById('page-num').textContent = isTwoPage ? `${num}-${num + 1}` : num;
+
+            document.getElementById('btn-prev').disabled = num <= 1;
+            document.getElementById('btn-next').disabled = num >= pdfDoc.numPages;
+        }
+
+        async function renderSinglePage(num, container) {
+            if (num > pdfDoc.numPages) return;
+
+            const page = await pdfDoc.getPage(num);
+            const viewport = page.getViewport({ scale: scale });
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.className = 'pdf-canvas';
+
+            // 修改 2：導入設備像素比 (Device Pixel Ratio) 提高渲染解析度
+            const outputScale = window.devicePixelRatio || 1;
+
+            // 調整內部畫布的寬高（物理像素）
+            canvas.width = Math.floor(viewport.width * outputScale);
+            canvas.height = Math.floor(viewport.height * outputScale);
+            
+            // 限制視覺上的 CSS 寬高（邏輯像素），讓其看起來大小不變，但非常清晰
+            canvas.style.width = Math.floor(viewport.width) + "px";
+            canvas.style.height = Math.floor(viewport.height) + "px";
+
+            container.appendChild(canvas);
+
+            // 當設備比例不為 1 時，使用 transform 對應放大繪製內容
+            const transform = outputScale !== 1 
+                ? [outputScale, 0, 0, outputScale, 0, 0] 
+                : null;
+
+            const renderContext = {
+                canvasContext: context,
+                transform: transform,
+                viewport: viewport
+            };
+            await page.render(renderContext).promise;
+        }
+
+        function onPrevPage() {
+            if (pageNum <= 1) return;
+            const offset = (scale <= 1.0 && window.innerWidth > 800) ? 2 : 1;
+            renderPage(Math.max(1, pageNum - offset));
+        }
+
+        function onNextPage() {
+            if (pageNum >= pdfDoc.numPages) return;
+            const offset = (scale <= 1.0 && window.innerWidth > 800) ? 2 : 1;
+            renderPage(Math.min(pdfDoc.numPages, pageNum + offset));
+        }
+
+        function updateZoomUI() {
+            document.getElementById('zoom-level').textContent = Math.round(scale * 100) + '%';
+        }
+
+        // Swipe Gestures
+        function initTouchGestures() {
+            const container = document.getElementById('reader-container');
+            let touchstartX = 0;
+            let touchendX = 0;
+            let initialDistance = 0;
+            let initialScale = 1;
+            let isPinching = false;
+            let lastTapTime = 0;
+            let tapTimeout = null;
+            let lastRatio = 1;
+
+            container.ontouchstart = (e) => {
+                if (e.touches.length === 1) {
+                    touchstartX = e.changedTouches[0].screenX;
+                } else if (e.touches.length === 2) {
+                    isPinching = true;
+                    initialDistance = getDistance(e.touches);
+                    initialScale = scale;
+                }
+            };
+
+            container.ontouchmove = (e) => {
+                if (isPinching && e.touches.length === 2) {
+                    e.preventDefault();
+                    const currentDistance = getDistance(e.touches);
+                    if (initialDistance > 0) {
+                        lastRatio = currentDistance / initialDistance;
+                        const canvas = container.querySelector('canvas');
+                        if (canvas) {
+                            canvas.style.transform = `scale(${lastRatio})`;
+                            canvas.style.transformOrigin = 'center';
+                        }
+                    }
+                }
+            };
+
+            container.ontouchend = (e) => {
+                if (isPinching && e.touches.length < 2) {
+                    isPinching = false;
+                    if (lastRatio !== 1) {
+                        let newScale = initialScale * lastRatio;
+                        newScale = Math.max(0.2, Math.min(newScale, 5.0));
+                        scale = newScale;
+                        updateZoomUI();
+                        const canvas = container.querySelector('canvas');
+                        if (canvas) canvas.style.transform = 'none';
+                        renderPage(pageNum);
+                        lastRatio = 1;
+                    }
+                } else if (!isPinching) {
+                    touchendX = e.changedTouches[0].screenX;
+                    const moveDist = Math.abs(touchendX - touchstartX);
+                    if (moveDist > 50) {
+                        handleSwipe();
+                    } else {
+                        handleTap(e.changedTouches[0]);
+                    }
+                }
+            };
+
+            function handleTap(touch) {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTapTime;
+
+                if (tapLength < 300 && tapLength > 0) {
+                    if (tapTimeout) clearTimeout(tapTimeout);
+                    handleDoubleTap();
+                    lastTapTime = 0;
+                } else {
+                    lastTapTime = currentTime;
+                    tapTimeout = setTimeout(() => {
+                        handleSingleTap(touch);
+                    }, 300);
+                }
+            }
+
+            function handleDoubleTap() {
+                if (scale > 1.2) scale = 1.0;
+                else scale = 2.0;
+                updateZoomUI();
+                renderPage(pageNum);
+            }
+
+            function handleSingleTap(touch) {
+                const width = window.innerWidth;
+                const x = touch.clientX;
+                if (x < width * 0.3) onPrevPage();
+                else if (x > width * 0.7) onNextPage();
+            }
+
+            function handleSwipe() {
+                const threshold = 50;
+                if (touchendX < touchstartX - threshold) onNextPage();
+                if (touchendX > touchstartX + threshold) onPrevPage();
+            }
+
+            function getDistance(touches) {
+                const dx = touches[0].clientX - touches[1].clientX;
+                const dy = touches[0].clientY - touches[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+        }
+    </script>
+</body>
+</html>
