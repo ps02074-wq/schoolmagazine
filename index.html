@@ -275,7 +275,7 @@
             font-weight: bold;
         }
 
-        .form-group input {
+        .form-group input, .form-group select {
             width: 100%;
             padding: 8px;
             box-sizing: border-box;
@@ -338,13 +338,6 @@
             padding: 4px;
         }
 
-        #upload-category {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-        }
-
         /* Reader Overlay */
         .reader-overlay {
             position: fixed;
@@ -352,23 +345,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #333;
+            background: rgba(0, 0, 0, 0.9);
             z-index: 2000;
             display: flex;
             flex-direction: column;
-        }
-
-        .reader-overlay.dark-mode {
-            background: #000;
-        }
-
-        .reader-overlay.dark-mode .pdf-canvas {
-            filter: invert(0.9) hue-rotate(180deg);
-        }
-
-        .reader-overlay.dark-mode .reader-toolbar {
-            background: #111;
-            border-top: 1px solid #333;
         }
 
         .reader-toolbar {
@@ -381,35 +361,14 @@
             padding: 0 20px;
         }
 
-        .reader-toolbar .center {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .reader-toolbar .right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
         .reader-content {
             flex: 1;
-            overflow: hidden;
+            width: 100%;
+            height: calc(100% - 50px);
             display: flex;
             justify-content: center;
             align-items: center;
             position: relative;
-            overflow-y: auto;
-        }
-
-        .pdf-canvas {
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            margin: 10px;
-            background: white;
-            /* 解析度變更：確保透過 css 鎖定縮放後的視覺尺寸 */
-            max-width: 100%;
-            height: auto;
         }
 
         .footer {
@@ -447,13 +406,11 @@
     <div class="container">
         <header class="header">
             <h1>GAS 電子書櫃</h1>
-            <div id="debug-status" style="font-size:12px; color:gray; display:none;">JS Initializing...</div>
         </header>
 
         <div class="toolbar">
             <div id="category-filter" class="category-list">
                 <button class="cat-btn active" data-id="all">全部</button>
-                <!-- 動態插入分類 -->
             </div>
         </div>
 
@@ -505,25 +462,16 @@
             </div>
         </div>
 
-        <!-- PDF Reader Overlay -->
+        <!-- Google Drive Preview Reader Overlay -->
         <div id="pdf-reader" class="reader-overlay hidden">
-            <div class="reader-content" id="reader-container">
-                <!-- Canvas will be injected here -->
-            </div>
             <div class="reader-toolbar">
-                <div class="left"></div>
-                <div class="center">
-                    <button id="btn-prev" class="btn small">◀</button>
-                    <span id="page-num">1</span> / <span id="page-count">--</span>
-                    <button id="btn-next" class="btn small">▶</button>
-                </div>
+                <div class="left"><span id="reader-title" style="font-weight:bold;">書名載入中...</span></div>
                 <div class="right">
-                    <button id="btn-toggle-theme" class="btn small" title="夜間模式">🌙</button>
-                    <button id="btn-zoom-out" class="btn small">－</button>
-                    <span id="zoom-level">100%</span>
-                    <button id="btn-zoom-in" class="btn small">＋</button>
-                    <button id="btn-close-reader" class="btn small" style="background:#e74c3c">關閉</button>
+                    <button id="btn-close-reader" class="btn small" style="background:#e74c3c; font-size:14px;">關閉閱讀器</button>
                 </div>
+            </div>
+            <div class="reader-content" id="reader-container">
+                <!-- Iframe 將自動插入於此處 -->
             </div>
         </div>
 
@@ -536,13 +484,8 @@
         </footer>
     </div>
 
-    <!-- SortableJS -->
+    <!-- SortableJS (保留給後台排序功能使用) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <!-- PDF.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
 
     <script>
         // ==========================================================
@@ -558,16 +501,15 @@
         let bookSortable = null;
         let catSortable = null;
         let allCategories = [];
-
-        // Reader State
-        let pdfDoc = null;
-        let pageNum = 1;
-        let scale = 1.0;
         let isReaderOpen = false;
 
-        // --- Core Fetch API (取代 google.script.run) ---
+        // --- Core Fetch API ---
         function runGoogleScript(funcName, args) {
-            showLoading();
+            // 除了新增觀看與按讚這種背景作業外，其他才顯示全螢幕 loading
+            if(funcName !== 'addView' && funcName !== 'addLike') {
+                showLoading();
+            }
+            
             return new Promise((resolve, reject) => {
                 if (GAS_WEB_APP_URL.includes('AKfyc...')) {
                     hideLoading();
@@ -600,7 +542,7 @@
                 .catch(err => {
                     hideLoading();
                     console.error('Fetch error:', err);
-                    alert('網路或伺服器連線錯誤，請重試: ' + err);
+                    alert('網路連線錯誤，請重試: ' + err);
                     reject(err);
                 });
             });
@@ -608,9 +550,6 @@
 
         // --- Initialization ---
         function initApp() {
-            const debugEl = document.getElementById('debug-status');
-            if (debugEl) debugEl.style.display = 'none';
-
             // Bind UI Elements
             const btnOpenUpload = document.getElementById('btn-upload-modal');
             const btnCloseUpload = document.querySelector('.close-btn');
@@ -622,14 +561,7 @@
             const modal = document.getElementById('upload-modal');
             const statusLog = document.getElementById('upload-status');
             const uploadFileInput = document.getElementById('upload-files');
-
-            // Reader Elements
             const btnCloseReader = document.getElementById('btn-close-reader');
-            const btnPrev = document.getElementById('btn-prev');
-            const btnNext = document.getElementById('btn-next');
-            const btnZoomIn = document.getElementById('btn-zoom-in');
-            const btnZoomOut = document.getElementById('btn-zoom-out');
-            const btnTheme = document.getElementById('btn-toggle-theme');
 
             btnOpenUpload.onclick = (e) => {
                 if (e) e.preventDefault();
@@ -651,23 +583,11 @@
 
             // Reader Binds
             if (btnCloseReader) btnCloseReader.onclick = closeReader;
-            if (btnPrev) btnPrev.onclick = onPrevPage;
-            if (btnNext) btnNext.onclick = onNextPage;
-            if (btnZoomIn) btnZoomIn.onclick = () => { scale += 0.1; updateZoomUI(); renderPage(pageNum); };
-            btnZoomOut.onclick = () => { if (scale > 0.2) scale -= 0.1; updateZoomUI(); renderPage(pageNum); };
-
-            btnTheme.onclick = () => {
-                document.getElementById('pdf-reader').classList.toggle('dark-mode');
-            };
 
             // Keyboard Shortcuts
             window.addEventListener('keydown', (e) => {
                 if (!isReaderOpen) return;
-                switch (e.key) {
-                    case 'ArrowLeft': onPrevPage(); break;
-                    case 'ArrowRight': onNextPage(); break;
-                    case 'Escape': closeReader(); break;
-                }
+                if (e.key === 'Escape') closeReader();
             });
 
             // Initial Load
@@ -738,7 +658,7 @@
 
                     await runGoogleScript('uploadBook', [data, customName, file.type, password, categoryId])
                         .then(res => {
-                            if (res.success) {
+                            if (res && res.success) {
                                 log(`✅ ${customName}: 上傳成功`, 'success');
                             } else {
                                 log(`❌ ${customName}: 失敗 - ${res.message}`, 'error');
@@ -796,7 +716,6 @@
         // --- Data & Rendering ---
         async function loadData() {
             try {
-                // 修改 1：使用單一 API 請求，節省 GAS 兩次冷啟動時間
                 const initialData = await runGoogleScript('getInitialData', []);
                 const config = initialData.config;
                 allBooks = initialData.books;
@@ -812,7 +731,7 @@
 
             } catch (e) {
                 console.error(e);
-                document.getElementById('book-grid').innerHTML = '<div class="empty-state">載入失敗: 請檢查開發者工具的 Console 紀錄</div>';
+                document.getElementById('book-grid').innerHTML = '<div class="empty-state">載入失敗: 請檢查網路連線或更新設定</div>';
             }
         }
 
@@ -1024,50 +943,32 @@
             document.getElementById('loading-overlay').classList.add('hidden');
         }
 
-        // --- PDF Reader Functions ---
-        async function openReader(fileId, title, bookId) {
+        // ==========================================
+        //  全新輕量化 PDF 閱讀器 (Iframe 預覽模式)
+        // ==========================================
+        function openReader(fileId, title, bookId) {
             isReaderOpen = true;
             document.getElementById('pdf-reader').classList.remove('hidden');
             document.body.style.overflow = 'hidden'; 
+            
+            // 更新工具列標題
+            document.getElementById('reader-title').textContent = title || '閱讀中';
 
-            pdfDoc = null;
-            pageNum = 1;
-            scale = 1.0;
-            document.getElementById('zoom-level').textContent = '100%';
-            document.getElementById('reader-container').innerHTML = '<div style="color:white; font-size: 20px;">載入中...</div>';
+            const container = document.getElementById('reader-container');
+            
+            // 加入 Google Drive 預覽用的 Iframe
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://drive.google.com/file/d/${fileId}/preview`;
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            
+            container.innerHTML = ''; // 清空內容
+            container.appendChild(iframe); // 插入 Iframe
 
-            try {
-                const result = await runGoogleScript('getBookContent', [fileId]);
-                const pdfData = atob(result.base64);
-
-                const loadingTask = pdfjsLib.getDocument({ data: pdfData });
-                pdfDoc = await loadingTask.promise;
-
-                document.getElementById('page-count').textContent = pdfDoc.numPages;
-                document.getElementById('reader-container').innerHTML = '';
-
-                const page = await pdfDoc.getPage(1);
-                const viewport = page.getViewport({ scale: 1.0 });
-                const containerH = window.innerHeight - 50; 
-                const containerW = window.innerWidth;
-
-                const scaleH = containerH / viewport.height;
-                const scaleW = containerW / viewport.width;
-
-                scale = Math.min(scaleH, scaleW) * 0.95;
-                updateZoomUI();
-
-                renderPage(pageNum);
-
-                if (bookId) {
-                    runGoogleScript('addView', [bookId]);
-                }
-
-                initTouchGestures();
-
-            } catch (e) {
-                alert('無法開啟書籍或權限不足');
-                closeReader();
+            // 背景處理增加點閱率，不需要 await
+            if (bookId) {
+                runGoogleScript('addView', [bookId]);
             }
         }
 
@@ -1075,184 +976,8 @@
             isReaderOpen = false;
             document.getElementById('pdf-reader').classList.add('hidden');
             document.body.style.overflow = '';
-            pdfDoc = null;
-        }
-
-        async function renderPage(num) {
-            if (!isReaderOpen || !pdfDoc) return;
-
-            const container = document.getElementById('reader-container');
-            container.innerHTML = ''; 
-
-            const isTwoPage = (scale <= 1.0 && window.innerWidth > 800 && num < pdfDoc.numPages);
-
-            await renderSinglePage(num, container);
-
-            if (isTwoPage) {
-                await renderSinglePage(num + 1, container);
-            }
-
-            pageNum = num;
-            document.getElementById('page-num').textContent = isTwoPage ? `${num}-${num + 1}` : num;
-
-            document.getElementById('btn-prev').disabled = num <= 1;
-            document.getElementById('btn-next').disabled = num >= pdfDoc.numPages;
-        }
-
-        async function renderSinglePage(num, container) {
-            if (num > pdfDoc.numPages) return;
-
-            const page = await pdfDoc.getPage(num);
-            const viewport = page.getViewport({ scale: scale });
-
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.className = 'pdf-canvas';
-
-            // 修改 2：導入設備像素比 (Device Pixel Ratio) 提高渲染解析度
-            const outputScale = window.devicePixelRatio || 1;
-
-            // 調整內部畫布的寬高（物理像素）
-            canvas.width = Math.floor(viewport.width * outputScale);
-            canvas.height = Math.floor(viewport.height * outputScale);
-            
-            // 限制視覺上的 CSS 寬高（邏輯像素），讓其看起來大小不變，但非常清晰
-            canvas.style.width = Math.floor(viewport.width) + "px";
-            canvas.style.height = Math.floor(viewport.height) + "px";
-
-            container.appendChild(canvas);
-
-            // 當設備比例不為 1 時，使用 transform 對應放大繪製內容
-            const transform = outputScale !== 1 
-                ? [outputScale, 0, 0, outputScale, 0, 0] 
-                : null;
-
-            const renderContext = {
-                canvasContext: context,
-                transform: transform,
-                viewport: viewport
-            };
-            await page.render(renderContext).promise;
-        }
-
-        function onPrevPage() {
-            if (pageNum <= 1) return;
-            const offset = (scale <= 1.0 && window.innerWidth > 800) ? 2 : 1;
-            renderPage(Math.max(1, pageNum - offset));
-        }
-
-        function onNextPage() {
-            if (pageNum >= pdfDoc.numPages) return;
-            const offset = (scale <= 1.0 && window.innerWidth > 800) ? 2 : 1;
-            renderPage(Math.min(pdfDoc.numPages, pageNum + offset));
-        }
-
-        function updateZoomUI() {
-            document.getElementById('zoom-level').textContent = Math.round(scale * 100) + '%';
-        }
-
-        // Swipe Gestures
-        function initTouchGestures() {
-            const container = document.getElementById('reader-container');
-            let touchstartX = 0;
-            let touchendX = 0;
-            let initialDistance = 0;
-            let initialScale = 1;
-            let isPinching = false;
-            let lastTapTime = 0;
-            let tapTimeout = null;
-            let lastRatio = 1;
-
-            container.ontouchstart = (e) => {
-                if (e.touches.length === 1) {
-                    touchstartX = e.changedTouches[0].screenX;
-                } else if (e.touches.length === 2) {
-                    isPinching = true;
-                    initialDistance = getDistance(e.touches);
-                    initialScale = scale;
-                }
-            };
-
-            container.ontouchmove = (e) => {
-                if (isPinching && e.touches.length === 2) {
-                    e.preventDefault();
-                    const currentDistance = getDistance(e.touches);
-                    if (initialDistance > 0) {
-                        lastRatio = currentDistance / initialDistance;
-                        const canvas = container.querySelector('canvas');
-                        if (canvas) {
-                            canvas.style.transform = `scale(${lastRatio})`;
-                            canvas.style.transformOrigin = 'center';
-                        }
-                    }
-                }
-            };
-
-            container.ontouchend = (e) => {
-                if (isPinching && e.touches.length < 2) {
-                    isPinching = false;
-                    if (lastRatio !== 1) {
-                        let newScale = initialScale * lastRatio;
-                        newScale = Math.max(0.2, Math.min(newScale, 5.0));
-                        scale = newScale;
-                        updateZoomUI();
-                        const canvas = container.querySelector('canvas');
-                        if (canvas) canvas.style.transform = 'none';
-                        renderPage(pageNum);
-                        lastRatio = 1;
-                    }
-                } else if (!isPinching) {
-                    touchendX = e.changedTouches[0].screenX;
-                    const moveDist = Math.abs(touchendX - touchstartX);
-                    if (moveDist > 50) {
-                        handleSwipe();
-                    } else {
-                        handleTap(e.changedTouches[0]);
-                    }
-                }
-            };
-
-            function handleTap(touch) {
-                const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTapTime;
-
-                if (tapLength < 300 && tapLength > 0) {
-                    if (tapTimeout) clearTimeout(tapTimeout);
-                    handleDoubleTap();
-                    lastTapTime = 0;
-                } else {
-                    lastTapTime = currentTime;
-                    tapTimeout = setTimeout(() => {
-                        handleSingleTap(touch);
-                    }, 300);
-                }
-            }
-
-            function handleDoubleTap() {
-                if (scale > 1.2) scale = 1.0;
-                else scale = 2.0;
-                updateZoomUI();
-                renderPage(pageNum);
-            }
-
-            function handleSingleTap(touch) {
-                const width = window.innerWidth;
-                const x = touch.clientX;
-                if (x < width * 0.3) onPrevPage();
-                else if (x > width * 0.7) onNextPage();
-            }
-
-            function handleSwipe() {
-                const threshold = 50;
-                if (touchendX < touchstartX - threshold) onNextPage();
-                if (touchendX > touchstartX + threshold) onPrevPage();
-            }
-
-            function getDistance(touches) {
-                const dx = touches[0].clientX - touches[1].clientX;
-                const dy = touches[0].clientY - touches[1].clientY;
-                return Math.sqrt(dx * dx + dy * dy);
-            }
+            // 清除 Iframe 避免背景繼續消耗資源
+            document.getElementById('reader-container').innerHTML = '';
         }
     </script>
 </body>
